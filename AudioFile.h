@@ -48,6 +48,15 @@
 #include <algorithm>
 #include <limits>
 
+#if __cplusplus >= 202002L
+    #include <utility>
+    #define AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE const std::span<const uint8_t>
+#else
+    #warn "C++20 not supported - will result in many extra copies"
+    #define AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE const std::vector<uint8_t>&
+#endif
+
+
 // disable some warnings on Windows
 #if defined (_MSC_VER)
     __pragma(warning (push))
@@ -105,7 +114,7 @@ public:
         
     //=============================================================
     /** Loads an audio file from data in memory */
-    bool loadFromMemory (const std::vector<uint8_t>& fileData);
+    bool loadFromMemory (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData);
     
     //=============================================================
     /** @Returns the sample rate */
@@ -185,9 +194,9 @@ private:
     };
     
     //=============================================================
-    AudioFileFormat determineAudioFileFormat (const std::vector<uint8_t>& fileData);
-    bool decodeWaveFile (const std::vector<uint8_t>& fileData);
-    bool decodeAiffFile (const std::vector<uint8_t>& fileData);
+    AudioFileFormat determineAudioFileFormat (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData);
+    bool decodeWaveFile (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData);
+    bool decodeAiffFile (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData);
     
     //=============================================================
     bool saveToWaveFile (std::string filePath);
@@ -197,14 +206,14 @@ private:
     void clearAudioBuffer();
     
     //=============================================================
-    int32_t fourBytesToInt (const std::vector<uint8_t>& source, int startIndex, Endianness endianness = Endianness::LittleEndian);
-    int16_t twoBytesToInt (const std::vector<uint8_t>& source, int startIndex, Endianness endianness = Endianness::LittleEndian);
-    int getIndexOfString (const std::vector<uint8_t>& source, std::string s);
-    int getIndexOfChunk (const std::vector<uint8_t>& source, const std::string& chunkHeaderID, int startIndex, Endianness endianness = Endianness::LittleEndian);
+    int32_t fourBytesToInt (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, int startIndex, Endianness endianness = Endianness::LittleEndian);
+    int16_t twoBytesToInt (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, int startIndex, Endianness endianness = Endianness::LittleEndian);
+    int getIndexOfString (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, std::string s);
+    int getIndexOfChunk (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, const std::string& chunkHeaderID, int startIndex, Endianness endianness = Endianness::LittleEndian);
 
     //=============================================================
-    uint32_t getAiffSampleRate (const std::vector<uint8_t>& fileData, int sampleRateStartIndex);
-    bool tenByteMatch (const std::vector<uint8_t>& v1, int startIndex1, const std::vector<uint8_t>& v2, int startIndex2);
+    uint32_t getAiffSampleRate (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData, int sampleRateStartIndex);
+    bool tenByteMatch (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE v1, int startIndex1, AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE v2, int startIndex2);
     void addSampleRateToAiffData (std::vector<uint8_t>& fileData, uint32_t sampleRate);
     
     //=============================================================
@@ -213,7 +222,7 @@ private:
     void addInt16ToFileData (std::vector<uint8_t>& fileData, int16_t i, Endianness endianness = Endianness::LittleEndian);
     
     //=============================================================
-    bool writeDataToFile (const std::vector<uint8_t>& fileData, std::string filePath);
+    bool writeDataToFile (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData, std::string filePath);
     
     //=============================================================
     void reportError (std::string errorMessage);
@@ -545,7 +554,7 @@ bool AudioFile<T>::load (std::string filePath)
 
 //=============================================================
 template <class T>
-bool AudioFile<T>::loadFromMemory (const std::vector<uint8_t>& fileData)
+bool AudioFile<T>::loadFromMemory (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData)
 {
     // get audio file format
     audioFileFormat = determineAudioFileFormat (fileData);
@@ -567,7 +576,7 @@ bool AudioFile<T>::loadFromMemory (const std::vector<uint8_t>& fileData)
 
 //=============================================================
 template <class T>
-bool AudioFile<T>::decodeWaveFile (const std::vector<uint8_t>& fileData)
+bool AudioFile<T>::decodeWaveFile (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData)
 {
     // -----------------------------------------------------------
     // HEADER CHUNK
@@ -726,7 +735,7 @@ bool AudioFile<T>::decodeWaveFile (const std::vector<uint8_t>& fileData)
 
 //=============================================================
 template <class T>
-bool AudioFile<T>::decodeAiffFile (const std::vector<uint8_t>& fileData)
+bool AudioFile<T>::decodeAiffFile (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData)
 {
     // -----------------------------------------------------------
     // HEADER CHUNK
@@ -881,7 +890,7 @@ bool AudioFile<T>::decodeAiffFile (const std::vector<uint8_t>& fileData)
 
 //=============================================================
 template <class T>
-uint32_t AudioFile<T>::getAiffSampleRate (const std::vector<uint8_t>& fileData, int sampleRateStartIndex)
+uint32_t AudioFile<T>::getAiffSampleRate (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData, int sampleRateStartIndex)
 {
     for (auto it : aiffSampleRateTable)
     {
@@ -894,7 +903,7 @@ uint32_t AudioFile<T>::getAiffSampleRate (const std::vector<uint8_t>& fileData, 
 
 //=============================================================
 template <class T>
-bool AudioFile<T>::tenByteMatch (const std::vector<uint8_t>& v1, int startIndex1, const std::vector<uint8_t>& v2, int startIndex2)
+bool AudioFile<T>::tenByteMatch (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE v1, int startIndex1, AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE v2, int startIndex2)
 {
     for (int i = 0; i < 10; i++)
     {
@@ -1156,7 +1165,7 @@ bool AudioFile<T>::saveToAiffFile (std::string filePath)
 
 //=============================================================
 template <class T>
-bool AudioFile<T>::writeDataToFile (const std::vector<uint8_t>& fileData, std::string filePath)
+bool AudioFile<T>::writeDataToFile (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData, std::string filePath)
 {
     std::ofstream outputFile (filePath, std::ios::binary);
     
@@ -1244,7 +1253,7 @@ void AudioFile<T>::clearAudioBuffer()
 
 //=============================================================
 template <class T>
-AudioFileFormat AudioFile<T>::determineAudioFileFormat (const std::vector<uint8_t>& fileData)
+AudioFileFormat AudioFile<T>::determineAudioFileFormat (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE fileData)
 {
     std::string header (fileData.begin(), fileData.begin() + 4);
     
@@ -1258,7 +1267,7 @@ AudioFileFormat AudioFile<T>::determineAudioFileFormat (const std::vector<uint8_
 
 //=============================================================
 template <class T>
-int32_t AudioFile<T>::fourBytesToInt (const std::vector<uint8_t>& source, int startIndex, Endianness endianness)
+int32_t AudioFile<T>::fourBytesToInt (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, int startIndex, Endianness endianness)
 {
     if (source.size() >= (startIndex + 4))
     {
@@ -1280,7 +1289,7 @@ int32_t AudioFile<T>::fourBytesToInt (const std::vector<uint8_t>& source, int st
 
 //=============================================================
 template <class T>
-int16_t AudioFile<T>::twoBytesToInt (const std::vector<uint8_t>& source, int startIndex, Endianness endianness)
+int16_t AudioFile<T>::twoBytesToInt (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, int startIndex, Endianness endianness)
 {
     int16_t result;
     
@@ -1294,7 +1303,7 @@ int16_t AudioFile<T>::twoBytesToInt (const std::vector<uint8_t>& source, int sta
 
 //=============================================================
 template <class T>
-int AudioFile<T>::getIndexOfString (const std::vector<uint8_t>& source, std::string stringToSearchFor)
+int AudioFile<T>::getIndexOfString (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, std::string stringToSearchFor)
 {
     int index = -1;
     int stringLength = (int)stringToSearchFor.length();
@@ -1315,7 +1324,7 @@ int AudioFile<T>::getIndexOfString (const std::vector<uint8_t>& source, std::str
 
 //=============================================================
 template <class T>
-int AudioFile<T>::getIndexOfChunk (const std::vector<uint8_t>& source, const std::string& chunkHeaderID, int startIndex, Endianness endianness)
+int AudioFile<T>::getIndexOfChunk (AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE source, const std::string& chunkHeaderID, int startIndex, Endianness endianness)
 {
     constexpr int dataLen = 4;
     
