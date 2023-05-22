@@ -49,7 +49,7 @@
 #include <limits>
 
 #if __cplusplus >= 202002L
-    #include <utility>
+    #include <span>
     #define AUDIOFILE_CONST_INPUT_BUFFER_PARAM_TYPE const std::span<const uint8_t>
 #else
     #warn "C++20 not supported - will result in many extra copies"
